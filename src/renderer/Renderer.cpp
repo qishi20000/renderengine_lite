@@ -27,6 +27,14 @@ void Renderer::render(View& view) {
 
     backend::RenderPassDescriptor desc;
     desc.target = driver.getDefaultRenderTarget();
+    // The default render target (window surface) doesn't know its own
+    // size — it must come from the View's viewport (kept in sync with the
+    // actual surface size via View::setViewport(), see
+    // NativeEngine.nativeResize() on Android). Without this, GLDriver falls
+    // back to glViewport(0,0,0,0) and silently rasterizes nothing (see the
+    // Viewport comment in backend/DriverApi.h).
+    const View::Viewport& vp = view.getViewport();
+    desc.viewport = {vp.x, vp.y, vp.width, vp.height};
     desc.clearColor[0] = 0.0f; desc.clearColor[1] = 0.0f;
     desc.clearColor[2] = 0.0f; desc.clearColor[3] = 1.0f;
     desc.clearColorBuffer = true;

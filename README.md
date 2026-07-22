@@ -44,8 +44,23 @@
   声明了析构函数但从未定义（缺 `src/engine/SwapChain.cpp`），导致链接期
   `undefined symbol`。产物 `librel_jni_bridge.so` 已确认 5 个
   `Java_com_rel_avmdemo_NativeEngine_*` 符号全部导出、未定义符号只剩系统库
-  （libEGL/libGLESv3/liblog/libandroid/libc++），尚未在真机/模拟器上跑起来
-  肉眼确认画面（当前环境没有可用的 Android 设备/模拟器）。
+  （libEGL/libGLESv3/liblog/libandroid/libc++）。**已在真机（Adreno GPU）
+  上跑起来**：APK 能正常启动、EGL/GLES3 上下文创建成功、无崩溃，但最初是
+  黑屏——排查后发现是个真正的渲染管线 bug：`GLDriver` 的默认渲染目标
+  （代表窗口 surface 的 FBO 0）在构造时被硬编码成 `{width:0, height:0}`
+  且从未更新，而 `View::setViewport()`（`nativeResize` 里已经在正确调用）
+  设置的视口从来没有真正接到 `glViewport()` 上，于是每帧其实都在执行
+  `glViewport(0,0,0,0)`——`glClear` 依然把全屏清成黑色，但三角形被光栅化
+  到一个 0×0 的视口里，什么都画不出来。修复方式：给
+  `backend::RenderPassDescriptor` 加了 `viewport` 字段，`Renderer::render()`
+  现在把 `View::getViewport()`（真实宽高，来自 `nativeResize`）显式传给
+  `GLDriver::beginRenderPass()`，不再依赖默认渲染目标自己的（不存在的）
+  尺寸信息。修复后已在真机上验证三角形正常显示并旋转。
+- Android 工程的 Gradle Wrapper（`android/gradlew` + `gradle/wrapper/`）
+  和 `android/app/build.gradle.kts` 里的 `ndkVersion` 已补齐/固定为
+  `27.1.12297006`（与本文档里用于交叉编译验证的 NDK 版本一致），避免
+  AGP 8.5.2 要求的最低 Gradle 版本（8.7）与本机残留/自动生成的旧 wrapper
+  冲突。
 - **M3（相机接入，CPU NV12 路径）**：视频输入契约明确为 **4 路 NV12 的 CPU
   地址**（`avm::CameraStreamManager` + `NV12FrameDescriptor`），不依赖
   `AHardwareBuffer`/`EGLImage`。每路相机的 Y 平面上传为 `R8` 纹理、交织 UV

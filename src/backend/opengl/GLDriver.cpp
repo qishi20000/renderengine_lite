@@ -239,7 +239,19 @@ void GLDriver::destroyRenderTarget(RenderTargetHandle h) {
 void GLDriver::beginRenderPass(const RenderPassDescriptor& desc) {
     auto* rt = mRenderTargets.get(desc.target);
     glBindFramebuffer(GL_FRAMEBUFFER, rt ? rt->fboId : 0);
-    if (rt) glViewport(0, 0, static_cast<GLsizei>(rt->width), static_cast<GLsizei>(rt->height));
+
+    // Prefer the caller-supplied viewport (desc.viewport) — it's the only
+    // source of truth for the default render target's size, since that
+    // target represents the window surface and doesn't track its own
+    // dimensions (see the Viewport comment in DriverApi.h). Fall back to
+    // the render target's own width/height for offscreen targets when the
+    // caller didn't bother setting one explicitly.
+    if (desc.viewport.width != 0 && desc.viewport.height != 0) {
+        glViewport(desc.viewport.x, desc.viewport.y,
+                   static_cast<GLsizei>(desc.viewport.width), static_cast<GLsizei>(desc.viewport.height));
+    } else if (rt) {
+        glViewport(0, 0, static_cast<GLsizei>(rt->width), static_cast<GLsizei>(rt->height));
+    }
 
     GLbitfield clearMask = 0;
     if (desc.clearColorBuffer) {

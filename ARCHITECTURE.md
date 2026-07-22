@@ -344,8 +344,8 @@ renderengine_lite/
 
 | 里程碑 | 内容 | 状态 |
 |---|---|---|
-| M0 | CMake + Android(Gradle+CMake) 工程打通，EGL 上屏黑屏/清屏 | ✅ 骨架已搭建（`android/`），已用 NDK r27 交叉编译+链接验证通过，未在真机上肉眼确认画面 |
-| M1 | `DriverApi` + `GLDriver` 基础资源（Texture/VertexBuffer/Program），跑通一个三角形 | ✅ 代码已实现；新增 `RenderableBuilder`/`Engine::setTransform` 公开 API 后，`jni_bridge.cpp` 里的旋转三角形 Sample 把整条链路（含 GLDriver）串了起来，NDK 交叉编译+链接通过 |
+| M0 | CMake + Android(Gradle+CMake) 工程打通，EGL 上屏黑屏/清屏 | ✅ 已在真机（Adreno）跑起来，EGL/GLES3 上下文创建成功无崩溃 |
+| M1 | `DriverApi` + `GLDriver` 基础资源（Texture/VertexBuffer/Program），跑通一个三角形 | ✅ 真机验证通过：`jni_bridge.cpp` 的旋转三角形 Sample 正常显示并旋转。中途修复了一个默认渲染目标 `glViewport(0,0,0,0)` 导致的黑屏 bug——`RenderPassDescriptor` 新增了 `viewport` 字段，由 `Renderer::render()` 从 `View::getViewport()` 显式填入（详见 README.md「当前状态」） |
 | M2 | `Engine/Scene/View/Renderer` 打通，`RenderableManager` 渲染静态网格 | ✅ 代码已实现（单一 GL render pass 包裹三个逻辑 Pass） |
 | M3 | 4 路 NV12(CPU 地址) 接入 `CameraStreamManager`，单路鱼眼 unwarp demo | ✅ `CameraStreamManager`（NV12→R8/RG8 上传）+ shader NV12→RGB 转换已实现；鱼眼 unwarp mesh 待 M4 |
 | M4 | 多路（4/6 路）拼接融合 + bowl mesh，完整环视 | ⏳ 接口已声明（`BowlMeshGenerator`/`StitchBlender`），实现待补 |

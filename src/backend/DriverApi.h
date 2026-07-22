@@ -42,8 +42,23 @@ struct ProgramDescriptor {
     // Used to build shader variants (see materials/ variant cache).
 };
 
+// width/height == 0 is a sentinel meaning "not set, use the render target's
+// own size" (fine for offscreen targets, whose size is known at creation
+// time). The default render target (the window surface, see
+// GLDriver::getDefaultRenderTarget) does NOT know its own size — window
+// surfaces resize independently of the GL objects representing them — so
+// callers targeting it (Renderer::render(), see RenderPass.cpp) must
+// always fill this in from the current View viewport, or nothing will be
+// rasterized (glViewport(0,0,0,0) discards every primitive while glClear
+// still clears the whole buffer, producing a silent black screen).
+struct Viewport {
+    int32_t x = 0, y = 0;
+    uint32_t width = 0, height = 0;
+};
+
 struct RenderPassDescriptor {
     RenderTargetHandle target;
+    Viewport viewport;
     float clearColor[4] = {0, 0, 0, 1};
     float clearDepth = 1.0f;
     bool clearColorBuffer = true;

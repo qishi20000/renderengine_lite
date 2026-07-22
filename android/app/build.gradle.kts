@@ -6,6 +6,13 @@ plugins {
 android {
     namespace = "com.rel.avmdemo"
     compileSdk = 34
+    // Pinned explicitly (rather than letting AGP pick "whatever's newest
+    // installed") so `externalNativeBuild` CMake invocations are
+    // reproducible across machines/CI. Must be installed via
+    // `sdkmanager --install "ndk;27.1.12297006"` (or Android Studio's SDK
+    // Manager) — this is also the exact NDK used to validate the native
+    // build end-to-end (see README.md "当前状态").
+    ndkVersion = "27.1.12297006"
 
     defaultConfig {
         applicationId = "com.rel.avmdemo"
