@@ -27,10 +27,25 @@
   `RenderPass`（避免 Adreno 多次 FBO 落地开销，见 `ARCHITECTURE.md` 第 7 节）。
   目前只有 `SurroundViewPass` 真正绘制（`CarModelPass`/`OverlayUIPass` 待
   Scene 支持按层过滤后再启用，代码中标记 `TODO(M5)`）。
-- **M0（Android 工程骨架）**：`android/` 下有一个最小 Gradle 工程，
-  `MainActivity` + `SurfaceView` + `Choreographer` 驱动 `jni_bridge.cpp`
-  创建 `rel::Engine` 并每帧调用 `Renderer::render()`。当前只建了空
-  Scene + 俯视 Camera，还没接相机/bowl mesh，跑起来是黑屏/清屏。
+- **M0（Android 工程骨架 + 旋转三角形 Sample）**：`android/` 下有一个最小
+  Gradle 工程，`MainActivity` + `SurfaceView` + `Choreographer` 驱动
+  `jni_bridge.cpp` 创建 `rel::Engine`。新增了 `rel::RenderableBuilder`
+  （`include/rel/Renderable.h`）+ `Engine::setTransform()` 两个公开 API，
+  用来把「几何 + Material」挂到 Entity 上、以及每帧更新 Transform ——
+  之前的骨架里这两块是缺失的，`Scene::addEntity()` 只是把 Entity 塞进
+  列表，没有任何办法真正让它渲染出东西。`jni_bridge.cpp` 现在用这两个新
+  API 建了一个三顶点、按 `u_model`/`u_viewProj` 绕 Z 轴旋转的纯色三角形
+  （3 秒一圈），验证 Engine/Scene/Renderer/GLDriver 整条链路。
+  **已用真机 NDK 交叉编译（arm64-v8a, NDK r27, `android.toolchain.cmake`）
+  完整验证过编译 + 链接**（此前只做过桌面 `-fsyntax-only` 语法检查，从未
+  真正过 NDK），过程中额外修掉了两个此前从未被编译验证出来的 bug：
+  `PlatformEGLAndroid.cpp` 里 `eglCreateImageKHR`/`eglGetNativeClientBufferANDROID`/
+  `eglDestroyImageKHR` 缺少 `EGL_EGLEXT_PROTOTYPES` 声明；`rel::SwapChain`
+  声明了析构函数但从未定义（缺 `src/engine/SwapChain.cpp`），导致链接期
+  `undefined symbol`。产物 `librel_jni_bridge.so` 已确认 5 个
+  `Java_com_rel_avmdemo_NativeEngine_*` 符号全部导出、未定义符号只剩系统库
+  （libEGL/libGLESv3/liblog/libandroid/libc++），尚未在真机/模拟器上跑起来
+  肉眼确认画面（当前环境没有可用的 Android 设备/模拟器）。
 - **M3（相机接入，CPU NV12 路径）**：视频输入契约明确为 **4 路 NV12 的 CPU
   地址**（`avm::CameraStreamManager` + `NV12FrameDescriptor`），不依赖
   `AHardwareBuffer`/`EGLImage`。每路相机的 Y 平面上传为 `R8` 纹理、交织 UV

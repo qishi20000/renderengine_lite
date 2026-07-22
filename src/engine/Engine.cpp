@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
 
 #include "engine/EngineImpl.h"
 #include "engine/ResourceImpls.h"
@@ -68,6 +69,19 @@ std::unique_ptr<Engine> Engine::create(void* nativeWindow) {
 
 Entity Engine::createEntity() { return mImpl->entityManager.create(); }
 void Engine::destroyEntity(Entity e) { mImpl->entityManager.destroy(e); }
+
+void Engine::setTransform(Entity entity, const float* mat4x4) {
+    mat4 local;
+    std::memcpy(local.m, mat4x4, sizeof(float) * 16);
+
+    auto& tm = mImpl->transformManager;
+    auto inst = tm.getInstance(entity);
+    if (inst == TransformManager::kInvalidInstance) {
+        tm.create(entity, TransformManager::kInvalidInstance, local);
+    } else {
+        tm.setTransform(inst, local);
+    }
+}
 
 Scene* Engine::createScene() {
     auto scene = std::unique_ptr<Scene>(new Scene());

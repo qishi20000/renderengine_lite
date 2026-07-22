@@ -30,6 +30,13 @@ public:
     Entity createEntity();
     void destroyEntity(Entity e);
 
+    // Creates (on first call for `entity`) or updates the entity's local
+    // transform. `mat4x4` is a 16-float column-major matrix (GLSL/GLES
+    // convention). See rel::RenderableBuilder for attaching geometry to an
+    // entity, and RenderPass::drawAllRenderables (src/renderer/RenderPass.cpp)
+    // for how this feeds into the "u_model" uniform every frame.
+    void setTransform(Entity entity, const float* mat4x4);
+
     Scene* createScene();
     View* createView();
     Camera* createCamera(Entity e);

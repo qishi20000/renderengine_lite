@@ -14,6 +14,17 @@ add_library(rel_jni_bridge SHARED
     jni_bridge.cpp
 )
 
+# renderengine_lite only exposes include/ (its backend-agnostic public API)
+# to link consumers; src/ is PRIVATE to that target (see root CMakeLists.txt)
+# since most of it (engine/, renderer/, backend/) is implementation detail.
+# src/avm/ is the one exception: it's the AVM "business layer" meant to be
+# driven directly by app/platform code like this JNI bridge (see
+# ARCHITECTURE.md section 6), so we add just enough of an include path here
+# for "avm/CameraStreamManager.h" etc. to resolve.
+target_include_directories(rel_jni_bridge PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src
+)
+
 target_link_libraries(rel_jni_bridge PRIVATE
     renderengine_lite
     android

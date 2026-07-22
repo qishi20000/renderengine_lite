@@ -1,5 +1,13 @@
 #include "platform/android/PlatformEGLAndroid.h"
 
+// The NDK's <EGL/eglext.h> guards the eglCreateImageKHR/eglGetNativeClient-
+// BufferANDROID/eglDestroyImageKHR prototypes (and EGL_NATIVE_BUFFER_ANDROID
+// etc.) behind EGL_EGLEXT_PROTOTYPES. These KHR/ANDROID extension entry
+// points are directly exported by Android's libEGL.so (unlike desktop GL,
+// where vendor drivers make eglGetProcAddress mandatory), so defining this
+// before the include and linking normally is sufficient — no manual
+// eglGetProcAddress dance needed. Must be defined before the include.
+#define EGL_EGLEXT_PROTOTYPES 1
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <android/hardware_buffer.h>

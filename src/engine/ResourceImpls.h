@@ -14,10 +14,12 @@
 #include "rel/IndexBuffer.h"
 #include "rel/Material.h"
 #include "rel/MaterialInstance.h"
+#include "rel/Renderable.h"
 #include "rel/SwapChain.h"
 #include "rel/Texture.h"
 #include "rel/VertexBuffer.h"
 
+#include "backend/DriverApi.h"
 #include "backend/DriverEnums.h"
 #include "backend/Handles.h"
 #include "utils/Math.h"
@@ -48,6 +50,27 @@ inline backend::ElementType toBackendElementType(ElementType t) {
         case ElementType::UInt:   return backend::ElementType::UInt;
     }
     return backend::ElementType::Float;
+}
+
+inline backend::PrimitiveType toBackendPrimitiveType(PrimitiveType t) {
+    switch (t) {
+        case PrimitiveType::Points:        return backend::PrimitiveType::Points;
+        case PrimitiveType::Lines:         return backend::PrimitiveType::Lines;
+        case PrimitiveType::LineStrip:     return backend::PrimitiveType::LineStrip;
+        case PrimitiveType::Triangles:     return backend::PrimitiveType::Triangles;
+        case PrimitiveType::TriangleStrip: return backend::PrimitiveType::TriangleStrip;
+    }
+    return backend::PrimitiveType::Triangles;
+}
+
+inline backend::VertexAttribute toBackendVertexAttribute(const VertexAttributeDesc& a) {
+    backend::VertexAttribute out;
+    out.type = toBackendElementType(a.type);
+    out.offset = a.offset;
+    out.stride = a.stride;
+    out.bufferSlot = a.slot;
+    out.normalized = a.normalized;
+    return out;
 }
 
 inline backend::PixelFormat toBackendPixelFormat(PixelFormat f) {
