@@ -11,12 +11,17 @@
 
 #include <memory>
 
+#include "avm/CameraStreamManager.h"
 #include "rel/Camera.h"
 #include "rel/Engine.h"
 #include "rel/Renderer.h"
 #include "rel/Scene.h"
 #include "rel/SwapChain.h"
 #include "rel/View.h"
+
+namespace {
+constexpr uint32_t kCameraCount = 4; // AVM rig: front/rear/left/right, see ARCHITECTURE.md sec.6
+}
 
 #define REL_TAG "RelJniBridge"
 
@@ -31,6 +36,10 @@ struct NativeEngineHolder {
     rel::Scene* scene = nullptr;
     rel::View* view = nullptr;
     rel::Camera* camera = nullptr;
+    // Video input contract: 4 NV12 frames at plain CPU addresses (see
+    // ARCHITECTURE.md sec.6 and avm::CameraStreamManager) — the Kotlin
+    // side hands frames in via nativeOnCameraFrame() below.
+    std::unique_ptr<rel::avm::CameraStreamManager> cameraStreamManager;
 };
 
 } // namespace
@@ -66,7 +75,32 @@ Java_com_rel_avmdemo_NativeEngine_nativeCreate(JNIEnv* env, jobject /*thiz*/, jo
     holder->view->setScene(holder->scene);
     holder->view->setCamera(holder->camera);
 
+    holder->cameraStreamManager =
+            std::make_unique<rel::avm::CameraStreamManager>(*holder->engine, kCameraCount);
+
     return reinterpret_cast<jlong>(holder.release());
+}
+
+// Feeds one NV12 camera frame in from plain CPU memory. `dataPtr` must
+// remain valid (not overwritten by the camera source) for the duration of
+// this call — see ARCHITECTURE.md section 8's threading-model caveat about
+// the CPU-NV12 input contract not being fence/handle-synchronized like a
+// zero-copy path would be.
+extern "C" JNIEXPORT void JNICALL
+Java_com_rel_avmdemo_NativeEngine_nativeOnCameraFrame(
+        JNIEnv*, jobject, jlong handle, jint cameraSlot, jlong dataPtr,
+        jint width, jint height, jint strideY, jint strideUV) {
+    auto* holder = reinterpret_cast<NativeEngineHolder*>(handle);
+    if (!holder || !holder->cameraStreamManager || dataPtr == 0) return;
+
+    rel::avm::NV12FrameDescriptor frame;
+    frame.data = reinterpret_cast<const uint8_t*>(static_cast<uintptr_t>(dataPtr));
+    frame.width = static_cast<uint32_t>(width);
+    frame.height = static_cast<uint32_t>(height);
+    frame.strideY = static_cast<uint32_t>(strideY);
+    frame.strideUV = static_cast<uint32_t>(strideUV);
+
+    holder->cameraStreamManager->onFrameAvailable(static_cast<uint32_t>(cameraSlot), frame);
 }
 
 extern "C" JNIEXPORT void JNICALL

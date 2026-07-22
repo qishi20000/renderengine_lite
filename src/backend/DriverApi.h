@@ -65,8 +65,13 @@ public:
     virtual IndexBufferHandle createIndexBuffer(
             const void* data, uint32_t sizeBytes, BufferUsage usage) = 0;
     virtual TextureHandle createTexture(const TextureDescriptor& desc) = 0;
-    // Imports an externally-produced image (AHardwareBuffer via EGLImage)
-    // as a read-only sampleable texture. Used for zero-copy camera frames.
+    // Reserved for a *future* zero-copy path (AHardwareBuffer -> EGLImage
+    // -> GL_TEXTURE_EXTERNAL_OES), not currently used: the actual camera
+    // input contract today is plain CPU-memory NV12 frames, uploaded via
+    // createTexture()+updateTexture() as R8/RG8 plane pairs — see
+    // avm::CameraStreamManager and ARCHITECTURE.md section 6. Kept in the
+    // interface so a platform that *can* hand REL a GPU-importable buffer
+    // has a path to avoid the CPU upload without an API change.
     virtual TextureHandle importExternalTexture(void* nativeImage) = 0;
     virtual ProgramHandle createProgram(const ProgramDescriptor& desc) = 0;
     virtual RenderTargetHandle createRenderTarget(
@@ -79,8 +84,14 @@ public:
             VertexBufferHandle h, const void* data, uint32_t sizeBytes, uint32_t offset) = 0;
     virtual void updateIndexBuffer(
             IndexBufferHandle h, const void* data, uint32_t sizeBytes, uint32_t offset) = 0;
+    // `rowStrideBytes` == 0 means the source data is tightly packed
+    // (rowStride == width * bytesPerPixel(format)). Pass a non-zero value
+    // when uploading directly from a camera buffer whose row stride is
+    // larger than its logical width (very common for NV12 camera frames,
+    // which are often row-aligned to 16/32/64 bytes) — see
+    // avm::CameraStreamManager and ARCHITECTURE.md section 6.
     virtual void updateTexture(
-            TextureHandle h, const void* data, uint32_t sizeBytes) = 0;
+            TextureHandle h, const void* data, uint32_t sizeBytes, uint32_t rowStrideBytes) = 0;
 
     // --- destruction (may be deferred internally until the GPU is done) --
     virtual void destroyVertexBuffer(VertexBufferHandle) = 0;
@@ -96,6 +107,10 @@ public:
     virtual void bindTexture(uint32_t unit, TextureHandle, const SamplerParams&) = 0;
     virtual void setUniformMat4(std::string_view name, const float* mat4x4) = 0;
     virtual void setUniformFloat4(std::string_view name, const float* v4) = 0;
+    // Needed to point a `sampler2D`/array-of-samplers uniform at the texture
+    // unit a texture was bound to via bindTexture() — GLSL ES does not
+    // implicitly associate sampler uniforms with texture units by name.
+    virtual void setUniformInt(std::string_view name, int value) = 0;
     virtual void setRasterState(const RasterState&) = 0;
     virtual void draw(PrimitiveType type,
                        VertexBufferHandle vb,

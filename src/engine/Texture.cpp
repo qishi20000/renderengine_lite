@@ -42,14 +42,14 @@ Texture* Texture::createExternal(Engine& engine, void* nativeImage) {
     return ptr;
 }
 
-void Texture::setImage(Engine& engine, const void* data, uint32_t sizeBytes) {
+void Texture::setImage(Engine& engine, const void* data, uint32_t sizeBytes, uint32_t rowStrideBytes) {
     if (mImpl->isExternal) {
         // External (camera-imported) textures are updated by re-importing a
         // new native image, not by CPU upload — see
         // avm::CameraStreamManager::onFrameAvailable.
         return;
     }
-    engine.getImpl()->driver->updateTexture(mImpl->handle, data, sizeBytes);
+    engine.getImpl()->driver->updateTexture(mImpl->handle, data, sizeBytes, rowStrideBytes);
 }
 
 } // namespace rel

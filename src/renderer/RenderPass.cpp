@@ -28,12 +28,13 @@ void applyMaterialParams(backend::DriverApi& driver, const MaterialInstance& mi)
                 break;
             case MaterialParam::Kind::Texture:
                 if (param.tex) {
-                    // TODO(M2): also bind the sampler index (u_xxx uniform
-                    // = nextTextureUnit) once DriverApi exposes
-                    // setUniformInt; GLSL samplers default to unit 0
-                    // otherwise, which only works for single-texture
-                    // materials like simple_lit/overlay_ui today.
-                    driver.bindTexture(nextTextureUnit++, param.tex->getImpl()->handle, {});
+                    const uint32_t unit = nextTextureUnit++;
+                    driver.bindTexture(unit, param.tex->getImpl()->handle, {});
+                    // Point the sampler uniform (which may be a single
+                    // sampler2D or one element of a sampler array, e.g.
+                    // "u_cameraY[2]") at the texture unit we just bound —
+                    // GLSL ES does not infer this from bindTexture() alone.
+                    driver.setUniformInt(param.name, static_cast<int>(unit));
                 }
                 break;
         }

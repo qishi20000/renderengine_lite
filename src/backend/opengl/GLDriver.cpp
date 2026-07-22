@@ -15,8 +15,6 @@ namespace rel::backend::opengl {
 
 namespace {
 
-GLenum toGLTarget(BufferUsage) { return 0; } // buffers pick target by call site, not usage
-
 GLenum bufferUsageToGLEnum(BufferUsage usage) {
     switch (usage) {
         case BufferUsage::Static:    return GL_STATIC_DRAW;
@@ -35,6 +33,39 @@ GLenum primitiveTypeToGLEnum(PrimitiveType type) {
         case PrimitiveType::TriangleStrip: return GL_TRIANGLE_STRIP;
     }
     return GL_TRIANGLES;
+}
+
+struct GLPixelFormat {
+    GLenum internalFormat;
+    GLenum format;
+    GLenum type;
+    uint32_t bytesPerPixel;
+};
+
+// Maps the API-agnostic PixelFormat (backend/DriverEnums.h) onto concrete
+// GLES3 enums. R8/RG8 matter in particular for avm::CameraStreamManager's
+// NV12 upload path: the Y plane is uploaded as R8 and the interleaved UV
+// plane as RG8 — see materials/surround_view.frag and ARCHITECTURE.md
+// section 6.
+GLPixelFormat toGLPixelFormat(PixelFormat format) {
+    switch (format) {
+        case PixelFormat::RGBA8:    return {GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE, 4};
+        case PixelFormat::RGB8:     return {GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE, 3};
+        case PixelFormat::RGBA16F:  return {GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT, 8};
+        case PixelFormat::R8:       return {GL_R8, GL_RED, GL_UNSIGNED_BYTE, 1};
+        case PixelFormat::RG8:      return {GL_RG8, GL_RG, GL_UNSIGNED_BYTE, 2};
+        case PixelFormat::DEPTH24:  return {GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, 4};
+        case PixelFormat::DEPTH32F: return {GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT, 4};
+        case PixelFormat::DEPTH24_STENCIL8:
+            return {GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, 4};
+        case PixelFormat::YUV_420_888_EXTERNAL:
+        case PixelFormat::RGBA8_EXTERNAL:
+            // External/opaque formats are never allocated as regular
+            // GL_TEXTURE_2D storage — they only exist via
+            // importExternalTexture(), which binds an EGLImage directly.
+            return {GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE, 4};
+    }
+    return {GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE, 4};
 }
 
 GLuint compileShader(GLenum stage, std::string_view src) {
@@ -86,19 +117,22 @@ TextureHandle GLDriver::createTexture(const TextureDescriptor& desc) {
     GLuint id;
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_2D, id);
-    // TODO(M1): map PixelFormat -> (internalFormat, format, type) properly.
+    const GLPixelFormat fmt = toGLPixelFormat(desc.format);
     glTexStorage2D(GL_TEXTURE_2D, static_cast<GLsizei>(desc.levels),
-                   GL_RGBA8, static_cast<GLsizei>(desc.width), static_cast<GLsizei>(desc.height));
+                   fmt.internalFormat, static_cast<GLsizei>(desc.width), static_cast<GLsizei>(desc.height));
     return mTextures.allocate(GLTexture{id, GL_TEXTURE_2D, desc});
 }
 
 TextureHandle GLDriver::importExternalTexture(void* nativeImage) {
-    // TODO(M3): create a GL_TEXTURE_EXTERNAL_OES name, call
-    // glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, nativeImage) via
-    // the Platform-provided EGLImageKHR. See avm/CameraStreamManager and
-    // ARCHITECTURE.md section 7 (zero-copy camera import).
+    // Not implemented: the current camera input contract is CPU-memory
+    // NV12 (see avm::CameraStreamManager), which goes through
+    // createTexture()+updateTexture() instead. This remains a documented
+    // extension point (not a TODO on the critical path) for a future
+    // platform/HAL that can hand REL a GPU-importable buffer directly —
+    // would create a GL_TEXTURE_EXTERNAL_OES name and call
+    // glEGLImageTargetTexture2DOES() via the Platform-provided EGLImageKHR.
     (void)nativeImage;
-    assert(false && "importExternalTexture: not implemented until M3 (camera integration)");
+    assert(false && "importExternalTexture: no zero-copy camera path wired up (see comment)");
     return {};
 }
 
@@ -152,14 +186,32 @@ void GLDriver::updateIndexBuffer(IndexBufferHandle h, const void* data, uint32_t
     }
 }
 
-void GLDriver::updateTexture(TextureHandle h, const void* data, uint32_t sizeBytes) {
+void GLDriver::updateTexture(TextureHandle h, const void* data, uint32_t sizeBytes, uint32_t rowStrideBytes) {
     (void)sizeBytes;
-    if (auto* tex = mTextures.get(h)) {
-        glBindTexture(GL_TEXTURE_2D, tex->glId);
-        // TODO(M1): honor mip level / sub-rect once needed; full-image upload for now.
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
-                         static_cast<GLsizei>(tex->desc.width), static_cast<GLsizei>(tex->desc.height),
-                         GL_RGBA, GL_UNSIGNED_BYTE, data);
+    auto* tex = mTextures.get(h);
+    if (!tex) return;
+
+    const GLPixelFormat fmt = toGLPixelFormat(tex->desc.format);
+    glBindTexture(GL_TEXTURE_2D, tex->glId);
+
+    // GL_UNPACK_ROW_LENGTH lets us upload directly from a camera buffer
+    // whose rows are wider than the logical image (common row-alignment
+    // padding), without a CPU-side repack. Row length is expressed in
+    // pixels, not bytes, hence the divide by bytesPerPixel. See
+    // ARCHITECTURE.md section 6/7 and avm::CameraStreamManager.
+    if (rowStrideBytes != 0 && fmt.bytesPerPixel != 0) {
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, static_cast<GLint>(rowStrideBytes / fmt.bytesPerPixel));
+    }
+
+    // TODO(M1): honor mip level / partial sub-rect once needed; full-image
+    // upload for now (fine for both regular textures and the per-frame
+    // NV12 plane uploads, which always replace the whole plane).
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
+                     static_cast<GLsizei>(tex->desc.width), static_cast<GLsizei>(tex->desc.height),
+                     fmt.format, fmt.type, data);
+
+    if (rowStrideBytes != 0 && fmt.bytesPerPixel != 0) {
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
     }
 }
 
@@ -245,6 +297,13 @@ void GLDriver::setUniformFloat4(std::string_view name, const float* v4) {
     if (!prog) return;
     GLint loc = glGetUniformLocation(prog->glId, std::string(name).c_str());
     if (loc >= 0) glUniform4fv(loc, 1, v4);
+}
+
+void GLDriver::setUniformInt(std::string_view name, int value) {
+    auto* prog = mPrograms.get(mCurrentProgram);
+    if (!prog) return;
+    GLint loc = glGetUniformLocation(prog->glId, std::string(name).c_str());
+    if (loc >= 0) glUniform1i(loc, value);
 }
 
 void GLDriver::setRasterState(const RasterState& state) {

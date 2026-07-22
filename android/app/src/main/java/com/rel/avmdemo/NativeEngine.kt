@@ -23,5 +23,28 @@ object NativeEngine {
     /** Drives one frame; called from a Choreographer.FrameCallback. */
     external fun nativeOnFrame(handle: Long, frameTimeNanos: Long)
 
+    /**
+     * Feeds one NV12 camera frame into `avm::CameraStreamManager` from a
+     * plain native memory address (see ARCHITECTURE.md section 6: the video
+     * input contract is 4 NV12 frames at CPU addresses, not
+     * AHardwareBuffer/EGLImage). [dataPtr] must point at Y-plane-then-UV-
+     * plane NV12 data and stay valid for the duration of this call - e.g. a
+     * direct ByteBuffer obtained from your camera source, whose address you
+     * pass via `directByteBuffer`'s native pointer (see
+     * android.os.SharedMemory / your camera SDK's native buffer API).
+     *
+     * [strideY]/[strideUV] are row strides in bytes; pass 0 for tightly
+     * packed (stride == width) buffers.
+     */
+    external fun nativeOnCameraFrame(
+        handle: Long,
+        cameraSlot: Int,
+        dataPtr: Long,
+        width: Int,
+        height: Int,
+        strideY: Int,
+        strideUV: Int
+    )
+
     external fun nativeDestroy(handle: Long)
 }

@@ -28,7 +28,10 @@ public:
     // avm::CameraStreamManager and ARCHITECTURE.md section 7.
     static Texture* createExternal(Engine& engine, void* nativeImage);
 
-    void setImage(Engine& engine, const void* data, uint32_t sizeBytes);
+    // `rowStrideBytes` == 0 means `data` is tightly packed. Pass the real
+    // row stride when uploading directly from a camera buffer (e.g. NV12
+    // frames with row-aligned padding) — see avm::CameraStreamManager.
+    void setImage(Engine& engine, const void* data, uint32_t sizeBytes, uint32_t rowStrideBytes = 0);
 
     // Internal use only (renderer/, avm/): see Camera::Impl comment above.
     struct Impl;

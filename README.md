@@ -31,12 +31,22 @@
   `MainActivity` + `SurfaceView` + `Choreographer` 驱动 `jni_bridge.cpp`
   创建 `rel::Engine` 并每帧调用 `Renderer::render()`。当前只建了空
   Scene + 俯视 Camera，还没接相机/bowl mesh，跑起来是黑屏/清屏。
-- **待补（M3~M6）**：相机 `AHardwareBuffer` 零拷贝导入
-  （`GLDriver::importExternalTexture` 当前是 `assert(false)` 占位）、
-  `avm::` 业务层的具体实现（目前只有接口声明）、Adreno 专项性能优化。
-  所有非 GLES 依赖的代码已用 `clang++ -fsyntax-only` 验证过编译通过；
-  GLES 相关代码（`GLDriver.cpp`）已用模拟 GLES3 头文件验证过语法正确，
-  尚未在真实 Android/NDK 环境构建过。
+- **M3（相机接入，CPU NV12 路径）**：视频输入契约明确为 **4 路 NV12 的 CPU
+  地址**（`avm::CameraStreamManager` + `NV12FrameDescriptor`），不依赖
+  `AHardwareBuffer`/`EGLImage`。每路相机的 Y 平面上传为 `R8` 纹理、交织 UV
+  平面上传为 `RG8` 纹理（`GLDriver` 已补全 `PixelFormat`→GL 枚举映射 +
+  `GL_UNPACK_ROW_LENGTH` 处理行对齐 padding），NV12→RGB 转换写在
+  `surround_view.frag` 里。`CameraStreamManager::bindToMaterialInstance()`
+  把纹理绑定为 `u_cameraY[i]`/`u_cameraUV[i]`；Android Demo 的
+  `jni_bridge.cpp` 新增了 `nativeOnCameraFrame()` 入口，Kotlin 侧可以直接传
+  原生内存地址喂帧。零拷贝 `AHardwareBuffer` 路径（`importExternalTexture`）
+  保留为未来可选项，未启用。
+- **待补（M4~M6）**：`avm::BowlMeshGenerator`/`FisheyeCalibration`/
+  `StitchBlender` 的具体实现（目前只有接口声明，鱼眼 unwarp 网格还没生成）、
+  Adreno 专项性能优化。所有非 GLES 依赖的代码已用
+  `clang++ -Wall -Wextra -fsyntax-only` 验证过编译通过；GLES 相关代码
+  （`GLDriver.cpp`）已用模拟 GLES3 头文件验证过语法正确，尚未在真实
+  Android/NDK 环境构建过。
 
 ## 目录速览
 

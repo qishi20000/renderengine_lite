@@ -56,7 +56,7 @@ public:
 
     void updateVertexBuffer(VertexBufferHandle h, const void* data, uint32_t sizeBytes, uint32_t offset) override;
     void updateIndexBuffer(IndexBufferHandle h, const void* data, uint32_t sizeBytes, uint32_t offset) override;
-    void updateTexture(TextureHandle h, const void* data, uint32_t sizeBytes) override;
+    void updateTexture(TextureHandle h, const void* data, uint32_t sizeBytes, uint32_t rowStrideBytes) override;
 
     void destroyVertexBuffer(VertexBufferHandle) override;
     void destroyIndexBuffer(IndexBufferHandle) override;
@@ -70,6 +70,7 @@ public:
     void bindTexture(uint32_t unit, TextureHandle, const SamplerParams&) override;
     void setUniformMat4(std::string_view name, const float* mat4x4) override;
     void setUniformFloat4(std::string_view name, const float* v4) override;
+    void setUniformInt(std::string_view name, int value) override;
     void setRasterState(const RasterState&) override;
     void draw(PrimitiveType type, VertexBufferHandle vb, IndexBufferHandle ib,
               uint32_t indexCount, const VertexAttribute* attributes,
