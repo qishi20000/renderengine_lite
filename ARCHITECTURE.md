@@ -324,16 +324,16 @@ renderengine_lite/
 
 ## 11. 里程碑建议
 
-| 里程碑 | 内容 |
-|---|---|
-| M0 | CMake + Android(Gradle+CMake) 工程打通，EGL 上屏黑屏/清屏 |
-| M1 | `DriverApi` + `GLDriver` 基础资源（Texture/VertexBuffer/Program），跑通一个三角形 |
-| M2 | `Engine/Scene/View/Renderer` 打通，`RenderableManager` 渲染静态网格 |
-| M3 | 相机 `AHardwareBuffer`→`GL_TEXTURE_EXTERNAL_OES` 接入，单路鱼眼 unwarp demo |
-| M4 | 多路（4/6 路）拼接融合 + bowl mesh，完整环视 |
-| M5 | 车辆 3D 模型叠加 + overlay UI |
-| M6 | Adreno 专项性能优化（GPU timing、带宽分析、功耗测试） |
-| M7（可选） | Vulkan backend 预研/实现 |
+| 里程碑 | 内容 | 状态 |
+|---|---|---|
+| M0 | CMake + Android(Gradle+CMake) 工程打通，EGL 上屏黑屏/清屏 | ✅ 骨架已搭建（`android/`），未在真机验证 |
+| M1 | `DriverApi` + `GLDriver` 基础资源（Texture/VertexBuffer/Program），跑通一个三角形 | ✅ 代码已实现，通过语法检查 |
+| M2 | `Engine/Scene/View/Renderer` 打通，`RenderableManager` 渲染静态网格 | ✅ 代码已实现（单一 GL render pass 包裹三个逻辑 Pass） |
+| M3 | 相机 `AHardwareBuffer`→`GL_TEXTURE_EXTERNAL_OES` 接入，单路鱼眼 unwarp demo | ⏳ 接口已声明（`CameraStreamManager`），实现待补 |
+| M4 | 多路（4/6 路）拼接融合 + bowl mesh，完整环视 | ⏳ 接口已声明（`BowlMeshGenerator`/`StitchBlender`），实现待补 |
+| M5 | 车辆 3D 模型叠加 + overlay UI | ⏳ `CarModelPass`/`OverlayUIPass` 占位，待 Scene 支持分层过滤 |
+| M6 | Adreno 专项性能优化（GPU timing、带宽分析、功耗测试） | ⏳ 未开始 |
+| M7（可选） | Vulkan backend 预研/实现 | ⏳ 未开始 |
 
 ---
 

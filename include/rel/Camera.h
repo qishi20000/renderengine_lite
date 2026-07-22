@@ -10,6 +10,8 @@ namespace rel {
 // shots typically want perspective.
 class Camera {
 public:
+    ~Camera();
+
     void setProjectionPerspective(float fovYDegrees, float aspect, float near, float far);
     void setProjectionOrtho(float left, float right, float bottom, float top, float near, float far);
     void lookAt(float eyeX, float eyeY, float eyeZ,
@@ -18,11 +20,16 @@ public:
 
     Entity getEntity() const { return mEntity; }
 
+    // Internal use only (renderer/, engine/): Impl is an incomplete type
+    // here and only fully defined in src/engine/ResourceImpls.h, so callers
+    // outside the engine implementation cannot dereference it.
+    struct Impl;
+    Impl* getImpl() const { return mImpl; }
+
 private:
     friend class Engine;
     explicit Camera(Entity e) : mEntity(e) {}
     Entity mEntity;
-    struct Impl;
     Impl* mImpl = nullptr;
 };
 

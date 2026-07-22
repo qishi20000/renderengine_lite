@@ -21,6 +21,8 @@ struct VertexAttributeDesc {
 // (see src/engine/VertexBufferImpl.h) — callers never touch the backend.
 class VertexBuffer {
 public:
+    ~VertexBuffer();
+
     class Builder {
     public:
         Builder& vertexCount(uint32_t count) { mVertexCount = count; return *this; }
@@ -39,11 +41,16 @@ public:
 
     void setBufferData(Engine& engine, const void* data, uint32_t sizeBytes, uint32_t offset = 0);
 
+    // Internal use only (renderer/): see the Camera::Impl comment for why
+    // this is safe to expose despite being "internal" (Impl is incomplete
+    // outside src/engine/ResourceImpls.h).
+    struct Impl;
+    Impl* getImpl() const { return mImpl; }
+
 private:
     friend class Builder;
     friend class Engine;
     VertexBuffer() = default;
-    struct Impl;
     Impl* mImpl = nullptr;
 };
 

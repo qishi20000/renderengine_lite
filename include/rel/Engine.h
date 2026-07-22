@@ -45,9 +45,15 @@ public:
     void destroy(VertexBuffer*);
     void destroy(IndexBuffer*);
 
+    // Internal use only (src/engine/, src/renderer/, src/avm/): Impl is an
+    // incomplete type here and only fully defined in
+    // src/engine/EngineImpl.h, so code outside the engine implementation
+    // cannot dereference it even though this accessor is technically public.
+    struct Impl;
+    Impl* getImpl() const { return mImpl.get(); }
+
 private:
     Engine();
-    struct Impl;
     std::unique_ptr<Impl> mImpl;
 };
 

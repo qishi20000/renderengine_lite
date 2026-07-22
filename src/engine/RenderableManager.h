@@ -26,11 +26,16 @@ public:
             mVb = vb; mIb = ib; mType = type; mIndexCount = indexCount;
             return *this;
         }
+        // Vertex attribute layout matching the VertexBuffer this Renderable
+        // draws from. Kept per-Renderable (rather than inferred from the
+        // Material) since a single Material variant (e.g. simple_lit) can
+        // be reused across meshes with different vertex layouts.
+        Builder& attribute(backend::VertexAttribute attr) { mAttributes.push_back(attr); return *this; }
         Builder& material(MaterialInstance* mi) { mMaterial = mi; return *this; }
         Builder& boundingBox(const Box& box) { mAabb = box; return *this; }
 
         Instance build(Entity e, RenderableManager& manager) {
-            return manager.addRenderable(e, mVb, mIb, mType, mIndexCount, mMaterial, mAabb);
+            return manager.addRenderable(e, mVb, mIb, mType, mIndexCount, mAttributes, mMaterial, mAabb);
         }
 
     private:
@@ -38,6 +43,7 @@ public:
         backend::IndexBufferHandle mIb;
         backend::PrimitiveType mType = backend::PrimitiveType::Triangles;
         uint32_t mIndexCount = 0;
+        std::vector<backend::VertexAttribute> mAttributes;
         MaterialInstance* mMaterial = nullptr;
         Box mAabb;
     };
@@ -48,6 +54,7 @@ public:
         backend::IndexBufferHandle ib;
         backend::PrimitiveType primitiveType;
         uint32_t indexCount;
+        std::vector<backend::VertexAttribute> attributes;
         MaterialInstance* material;
         Box aabb;
     };
@@ -63,9 +70,10 @@ public:
 private:
     Instance addRenderable(Entity e, backend::VertexBufferHandle vb, backend::IndexBufferHandle ib,
                             backend::PrimitiveType type, uint32_t indexCount,
+                            std::vector<backend::VertexAttribute> attributes,
                             MaterialInstance* mat, const Box& aabb) {
         Instance i = static_cast<Instance>(mRenderables.size());
-        mRenderables.push_back({e, vb, ib, type, indexCount, mat, aabb});
+        mRenderables.push_back({e, vb, ib, type, indexCount, std::move(attributes), mat, aabb});
         mEntityToInstance[e] = i;
         return i;
     }

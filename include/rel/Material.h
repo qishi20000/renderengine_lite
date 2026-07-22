@@ -11,6 +11,8 @@ namespace rel {
 // see ARCHITECTURE.md section 5 for why that's the right tradeoff here.
 class Material {
 public:
+    ~Material();
+
     class Builder {
     public:
         Builder& vertexShader(std::string_view glsl) { mVertexSrc = glsl; return *this; }
@@ -26,10 +28,13 @@ public:
     // preprocessor defines, e.g. {"N_CAMERA=4", "ENABLE_TONEMAP=1"}.
     MaterialInstance* createInstance(const std::vector<std::string>& defines = {});
 
+    // Internal use only (renderer/): see Camera::Impl comment above.
+    struct Impl;
+    Impl* getImpl() const { return mImpl; }
+
 private:
     friend class Engine;
     Material() = default;
-    struct Impl;
     Impl* mImpl = nullptr;
 };
 

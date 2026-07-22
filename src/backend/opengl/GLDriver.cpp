@@ -145,6 +145,13 @@ void GLDriver::updateVertexBuffer(VertexBufferHandle h, const void* data, uint32
     }
 }
 
+void GLDriver::updateIndexBuffer(IndexBufferHandle h, const void* data, uint32_t sizeBytes, uint32_t offset) {
+    if (auto* buf = mIndexBuffers.get(h)) {
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf->glId);
+        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, offset, sizeBytes, data);
+    }
+}
+
 void GLDriver::updateTexture(TextureHandle h, const void* data, uint32_t sizeBytes) {
     (void)sizeBytes;
     if (auto* tex = mTextures.get(h)) {

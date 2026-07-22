@@ -77,6 +77,8 @@ public:
     // --- resource update -------------------------------------------------
     virtual void updateVertexBuffer(
             VertexBufferHandle h, const void* data, uint32_t sizeBytes, uint32_t offset) = 0;
+    virtual void updateIndexBuffer(
+            IndexBufferHandle h, const void* data, uint32_t sizeBytes, uint32_t offset) = 0;
     virtual void updateTexture(
             TextureHandle h, const void* data, uint32_t sizeBytes) = 0;
 

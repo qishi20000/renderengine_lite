@@ -9,17 +9,22 @@ namespace rel {
 // several car-model parts reusing the same "simple_lit" material.
 class MaterialInstance {
 public:
+    ~MaterialInstance();
+
     void setParameter(std::string_view name, float x, float y, float z, float w);
     void setParameter(std::string_view name, const float* mat4x4);
     void setParameter(std::string_view name, Texture* texture);
 
     Material* getMaterial() const { return mMaterial; }
 
+    // Internal use only (renderer/): see Camera::Impl comment above.
+    struct Impl;
+    Impl* getImpl() const { return mImpl; }
+
 private:
     friend class Material;
     explicit MaterialInstance(Material* material) : mMaterial(material) {}
     Material* mMaterial;
-    struct Impl;
     Impl* mImpl = nullptr;
 };
 

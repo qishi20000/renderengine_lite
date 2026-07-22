@@ -8,6 +8,8 @@ enum class PixelFormat : uint8_t { RGBA8, RGB8, RGBA16F, R8, RG8, DEPTH24, DEPTH
 
 class Texture {
 public:
+    ~Texture();
+
     class Builder {
     public:
         Builder& width(uint32_t w) { mWidth = w; return *this; }
@@ -28,10 +30,13 @@ public:
 
     void setImage(Engine& engine, const void* data, uint32_t sizeBytes);
 
+    // Internal use only (renderer/, avm/): see Camera::Impl comment above.
+    struct Impl;
+    Impl* getImpl() const { return mImpl; }
+
 private:
     friend class Engine;
     Texture() = default;
-    struct Impl;
     Impl* mImpl = nullptr;
 };
 

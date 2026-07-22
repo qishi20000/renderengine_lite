@@ -55,6 +55,7 @@ public:
     RenderTargetHandle getDefaultRenderTarget() override;
 
     void updateVertexBuffer(VertexBufferHandle h, const void* data, uint32_t sizeBytes, uint32_t offset) override;
+    void updateIndexBuffer(IndexBufferHandle h, const void* data, uint32_t sizeBytes, uint32_t offset) override;
     void updateTexture(TextureHandle h, const void* data, uint32_t sizeBytes) override;
 
     void destroyVertexBuffer(VertexBufferHandle) override;

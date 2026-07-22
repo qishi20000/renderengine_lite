@@ -8,10 +8,15 @@ namespace rel {
 // headless/PBuffer support beyond what the desktop preview needs.
 class SwapChain {
 public:
+    ~SwapChain();
+
+    // Internal use only: see Camera::Impl comment above.
+    struct Impl;
+    Impl* getImpl() const { return mImpl; }
+
 private:
     friend class Engine;
     SwapChain() = default;
-    struct Impl;
     Impl* mImpl = nullptr;
 };
 

@@ -9,14 +9,19 @@ namespace rel {
 // small pass count.
 class Renderer {
 public:
+    ~Renderer();
+
     bool beginFrame(SwapChain* swapChain);
     void render(View& view);
     void endFrame();
 
+    // Internal use only: see Camera::Impl comment above.
+    struct Impl;
+    Impl* getImpl() const { return mImpl; }
+
 private:
     friend class Engine;
     Renderer() = default;
-    struct Impl;
     Impl* mImpl = nullptr;
 };
 

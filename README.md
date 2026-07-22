@@ -17,11 +17,26 @@
 
 ## 当前状态
 
-本仓库目前是**架构骨架（scaffold）**：核心抽象接口（`backend::DriverApi` /
-`backend::Handles` / ECS-lite 管理器 / RenderPass）已落地并通过语法检查，
-`backend::opengl::GLDriver` 已实现 M1 阶段的基础资源管理（纹理/顶点缓冲/
-Program/FBO/绘制调用）。相机零拷贝导入、多路拼接融合、车辆模型渲染等在
-`ARCHITECTURE.md` 里程碑 M3~M5 阶段逐步补齐（代码中标有 `TODO(M3)` 等标记）。
+- **M1（GLES 基础资源）**：`backend::DriverApi` + `backend::opengl::GLDriver`
+  已实现纹理/顶点缓冲/索引缓冲/Program/FBO/绘制调用，通过语法检查。
+- **M2（Engine/Scene/Renderer 打通）**：`Engine`/`Scene`/`View`/`Camera`/
+  `Material`/`MaterialInstance`/`VertexBuffer`/`IndexBuffer`/`Texture`/
+  `Renderer` 均已实现（pimpl 方式，内部通过 `getImpl()` 访问，详见
+  `src/engine/EngineImpl.h`、`src/engine/ResourceImpls.h`）。`Renderer::render()`
+  用单个 GL render pass 包裹 `SurroundView/CarModel/OverlayUI` 三个逻辑
+  `RenderPass`（避免 Adreno 多次 FBO 落地开销，见 `ARCHITECTURE.md` 第 7 节）。
+  目前只有 `SurroundViewPass` 真正绘制（`CarModelPass`/`OverlayUIPass` 待
+  Scene 支持按层过滤后再启用，代码中标记 `TODO(M5)`）。
+- **M0（Android 工程骨架）**：`android/` 下有一个最小 Gradle 工程，
+  `MainActivity` + `SurfaceView` + `Choreographer` 驱动 `jni_bridge.cpp`
+  创建 `rel::Engine` 并每帧调用 `Renderer::render()`。当前只建了空
+  Scene + 俯视 Camera，还没接相机/bowl mesh，跑起来是黑屏/清屏。
+- **待补（M3~M6）**：相机 `AHardwareBuffer` 零拷贝导入
+  （`GLDriver::importExternalTexture` 当前是 `assert(false)` 占位）、
+  `avm::` 业务层的具体实现（目前只有接口声明）、Adreno 专项性能优化。
+  所有非 GLES 依赖的代码已用 `clang++ -fsyntax-only` 验证过编译通过；
+  GLES 相关代码（`GLDriver.cpp`）已用模拟 GLES3 头文件验证过语法正确，
+  尚未在真实 Android/NDK 环境构建过。
 
 ## 目录速览
 
@@ -36,7 +51,7 @@ src/materials/       # 内置 GLSL ES shader（surround_view/simple_lit/overlay_
 src/avm/             # AVM 业务层：相机流/标定/拼接融合/网格生成
 src/platform/android/# EGL + AHardwareBuffer 平台适配
 samples/desktop_preview/  # 桌面预览（需 ANGLE，见 CMakeLists.txt 说明）
-android/             # Gradle 工程占位（JNI wrapper + Demo App）
+android/             # M0 Demo Gradle 工程（SurfaceView + JNI wrapper，见 android/README.md）
 third_party/         # glm 等轻量依赖
 ```
 

@@ -7,6 +7,8 @@ namespace rel {
 
 class IndexBuffer {
 public:
+    ~IndexBuffer();
+
     class Builder {
     public:
         Builder& indexCount(uint32_t count) { mIndexCount = count; return *this; }
@@ -20,10 +22,13 @@ public:
 
     void setBuffer(Engine& engine, const void* data, uint32_t sizeBytes, uint32_t offset = 0);
 
+    // Internal use only (renderer/): see Camera::Impl comment above.
+    struct Impl;
+    Impl* getImpl() const { return mImpl; }
+
 private:
     friend class Engine;
     IndexBuffer() = default;
-    struct Impl;
     Impl* mImpl = nullptr;
 };
 
